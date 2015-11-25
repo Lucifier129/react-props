@@ -1,6 +1,6 @@
 {
   "name": "react-props",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "description": "logger for refer",
   "main": "dist/react-props.js",
   "scripts": {
