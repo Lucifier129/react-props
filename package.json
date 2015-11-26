@@ -1,14 +1,15 @@
 {
   "name": "react-props",
   "version": "0.0.1",
-  "description": "logger for refer",
+  "description": "inject props to react component for high performance rendering",
   "main": "dist/react-props.js",
   "scripts": {
     "test": "mocha --compilers js:babel/register --recursive",
     "test:watch": "npm test -- --watch",
+    "build:lib": "babel src --out-dir lib",
     "build:umd": "webpack src/index.js dist/react-props.js --config webpack.config.development.js",
     "build:umd:min": "webpack src/index.js dist/react-props.min.js --config webpack.config.production.js",
-    "build": "npm run build:umd && npm run build:umd:min",
+    "build": "npm run build:lib && npm run build:umd && npm run build:umd:min",
     "prepublish": "npm run build"
   },
   "repository": {
@@ -17,7 +18,7 @@
   },
   "keywords": [
     "react",
-    "refer",
+    "react-props",
     "state"
   ],
   "author": "Jade Gu (guyingjie129@163.com)",

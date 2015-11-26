@@ -73,12 +73,13 @@ let combineConfig = obj => {
 
 
 let injectProps = (name, ...args) => Component => {
-	selector = currentSelectors[name]
+	selector = isFn(name) ? name : currentSelectors[name]
+	let selectorName = isStr(name) ? name : Component.name
 	return class injector extends React.Component {
 		componentDidMount() {
 			this.__update = () => this.forceUpdate()
 			addEvent(selectorName, this.__update)
-		},
+		}
 		componentWillUnmount() {
 			removeEvent(selectorName, this.__update)
 		}
@@ -86,7 +87,8 @@ let injectProps = (name, ...args) => Component => {
 			return false
 		}
 		render() {
-			let props = selector(this.props, ...args) || {}
+			let props = selector(this.props, ...args)
+			props = Object.assign(this.props, props)
 			return <Component {...props} />
 		}
 	}
