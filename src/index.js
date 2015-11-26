@@ -3,20 +3,20 @@ import React from 'react'
 let isType = type => obj => obj != null && Object.prototype.toString.call(obj) === `[object ${ type }]`
 let isObj = isType('Object')
 let isStr = isType('String')
-let isNum = isType('Number')
 let isFn = isType('Function')
-let isRegExp = isType('RegExp')
 let isArr = Array.isArray || isType('Array')
-let isThenable = obj => obj != null && isFn(obj.then)
 
 
 // state
 let currentState = {}
-let updateState = nextState => currentState = nextState
+export let updateState = (nextState, actionName) => {
+	currentState = nextState
+	triggerRenderByActionName(actionName)
+}
 
 // selector
 let currentSelectors = {}
-let combineSelector = selector => {
+export let addSelector = selector => {
 	Object.keys(selector).forEach(key => {
 		let item = selector[key]
 		if (!isFn(item)) {
@@ -25,20 +25,6 @@ let combineSelector = selector => {
 		currentSelectors[key] = (...args) => item(currentState, ...args)
 	})
 }
-
-// update queue
-let currentUpdaters = []
-let addUpdater = name => {
-	if (currentUpdaters.indexOf(name) === -1) {
-		currentUpdaters.push(name)
-	}
-}
-let addUpdaters = names => names.forEach(addUpdater)
-let clearUpdater = () => {
-	currentUpdaters.forEach(triggerEvent)
-	currentUpdaters = []
-}
-
 
 // eventEmit
 let currentEvents = {}
@@ -54,7 +40,10 @@ let removeEvent = (name, update) => {
 	if (!isArr(currentEvents[name])) {
 		return
 	}
-	currentEvents[name].filter(item => item !== update)
+	let index = currentEvents.indexOf(update)
+	if (index !== -1) {
+		currentEvents.splice(i, 1)
+	}
 }
 
 let triggerEvent = name => {
@@ -67,15 +56,19 @@ let triggerEvent = name => {
 // configuration
 
 let config = {}
-let combineConfig = obj => {
+export let addConfig = obj => Object.assign(config, obj)
 
+let triggerRenderByActionName = actionName => {
+	let updaters = config[actionName]
+	if (isArr(updaters)) {
+		updaters.forEach(triggerEvent)
+	}
 }
 
-
-let injectProps = (name, ...args) => Component => {
-	selector = isFn(name) ? name : currentSelectors[name]
+export let injectProps = (name, ...args) => Component => {
+	let selector = isFn(name) ? name : currentSelectors[name]
 	let selectorName = isStr(name) ? name : Component.name
-	return class injector extends React.Component {
+	return class Injector extends React.Component {
 		componentDidMount() {
 			this.__update = () => this.forceUpdate()
 			addEvent(selectorName, this.__update)
@@ -88,11 +81,7 @@ let injectProps = (name, ...args) => Component => {
 		}
 		render() {
 			let props = selector(this.props, ...args)
-			props = Object.assign(this.props, props)
-			return <Component {...props} />
+			return <Component {...this.props} {...props} />
 		}
 	}
 }
-
-
-
