@@ -2,7 +2,8 @@
   "name": "react-props",
   "version": "0.0.1",
   "description": "inject props to react component for high performance rendering",
-  "main": "dist/react-props.js",
+  "main": "lib/index.js",
+  "jsnext:main": "src/index.js",
   "scripts": {
     "test": "mocha --compilers js:babel/register --recursive",
     "test:watch": "npm test -- --watch",

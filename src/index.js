@@ -6,82 +6,127 @@ let isStr = isType('String')
 let isFn = isType('Function')
 let isArr = Array.isArray || isType('Array')
 
-
 // state
-let currentState = {}
-export let updateState = (nextState, actionName) => {
-	currentState = nextState
-	triggerRenderByActionName(actionName)
+let $getState = () => {}
+let $actions = {}
+let $selectors = {}
+let $component = {}
+let $matcher
+
+export let config = ({ getState, selectors, actions, matcher }) => {
+	addSelector(selectors)
+	$getState = getState
+	$actions = actions
+	$matcher = matcher
+}
+
+export let onAction = data => {
+	if (!isFn($matcher)) {
+		return
+	}
+	let result = $matcher(data)
+	switch (true) {
+		case isObj(result):
+			let { name, callback } = result
+			eachComponent(name, callback)
+			break
+		case isStr(result):
+			renderCompoent(result)
+			break
+		case isArr(result):
+			result.forEach(renderCompoent)
+			break
+	}
+}
+
+export let updater = {
+	DID_UPDATE: data => {
+		onAction(data)
+		return data
+	} 
+}
+
+export let bindReducer = reducer => {
+	return (state, actions) => {
+		let nextState = reducer(state, actions)
+		onAction({
+			state,
+			actions
+		})
+		return nextState
+	}
 }
 
 // selector
-let currentSelectors = {}
-export let addSelector = selector => {
-	Object.keys(selector).forEach(key => {
-		let item = selector[key]
-		if (!isFn(item)) {
-			return
+let addSelector = obj => {
+	Object.keys(obj).forEach(key => {
+		let query = obj[key]
+		if (isFn(query)) {
+			$selectors[key] = (props, ...args) => query($getState(), $actions, props, ...args)
 		}
-		currentSelectors[key] = (...args) => item(currentState, ...args)
 	})
 }
 
-// eventEmit
-let currentEvents = {}
 
-let addEvent = (name, update) => {
-	if (!isArr(currentEvents[name])) {
-		currentEvents[name] = []
+let addComponent = (name, component) => {
+	if (!isArr($component[name])) {
+		$component[name] = []
 	}
-	currentEvents[name].push(update)
+	$component[name].push(component)
 }
 
-let removeEvent = (name, update) => {
-	if (!isArr(currentEvents[name])) {
+let removeComponent = (name, component) => {
+	if (!isArr($component[name])) {
 		return
 	}
-	let index = currentEvents.indexOf(update)
+	let index = $component.indexOf(component)
 	if (index !== -1) {
-		currentEvents.splice(i, 1)
+		$component.splice(i, 1)
 	}
 }
 
-let triggerEvent = name => {
-	if (!isArr(currentEvents[name])) {
-		return
-	}
-	currentEvents[name].forEach(update => isFn(update) && update())
+let getComponent = name => {
+	let components = $component[name]
+	return isArr(components) ? components : []
 }
 
-// configuration
+let eachComponent = (name, fn) => {
+	getComponent(name).forEach(fn)
+}
 
-let config = {}
-export let addConfig = obj => Object.assign(config, obj)
-
-let triggerRenderByActionName = actionName => {
-	let updaters = config[actionName]
-	if (isArr(updaters)) {
-		updaters.forEach(triggerEvent)
-	}
+let renderCompoent = name => {
+	eachComponent(name, component => component.forceUpdate())
 }
 
 export let injectProps = (name, ...args) => Component => {
-	let selector = isFn(name) ? name : currentSelectors[name]
-	let selectorName = isStr(name) ? name : Component.name
-	return class Injector extends React.Component {
+	name = name || Component.name
+	class Injector extends React.Component {
 		componentDidMount() {
-			this.__update = () => this.forceUpdate()
-			addEvent(selectorName, this.__update)
+			addComponent(name, this)
 		}
 		componentWillUnmount() {
-			removeEvent(selectorName, this.__update)
-		}
-		shouldComponentUpdate() {
-			return false
+			removeComponent(name, this)
 		}
 		render() {
-			let props = selector(this.props, ...args)
+			let selector = $selectors[name]
+			let props = {}
+			if (isFn(selector)) {
+				props = selector(this.props, ...args)
+			}
 			return <Component {...this.props} {...props} />
 		}
 	}
+	Object.defineProperties(Injector, {
+		propTypes: {
+			set(propTypes) {
+				Component.propTypes = propTypes
+			}
+		},
+		defaultProps: {
+			set(defaultProps) {
+				Component.defaultProps = defaultProps
+			}
+		}
+	})
+	return Injector
 }
