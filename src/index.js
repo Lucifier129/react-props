@@ -82,12 +82,13 @@ let addComponent = (name, component) => {
 }
 
 let removeComponent = (name, component) => {
-	if (!isArr($components[name])) {
+	let components = $components[name]
+	if (!isArr(components)) {
 		return
 	}
-	let index = $components.indexOf(component)
+	let index = components.indexOf(component)
 	if (index !== -1) {
-		$components.splice(i, 1)
+		components.splice(index, 1)
 	}
 }
 
