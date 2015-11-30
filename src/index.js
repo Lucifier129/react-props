@@ -10,21 +10,21 @@ let isArr = Array.isArray || isType('Array')
 let $getState = () => {}
 let $actions = {}
 let $selectors = {}
-let $component = {}
-let $matcher
+let $components = {}
+let $match
 
-export let config = ({ getState, selectors, actions, matcher }) => {
-	addSelector(selectors)
+export let setFluxConfig = ({ getState, selectors, actions, match }) => {
+	addSelectors(selectors)
 	$getState = getState
 	$actions = actions
-	$matcher = matcher
+	$match = match
 }
 
-export let onAction = data => {
-	if (!isFn($matcher)) {
+export let handleAction = data => {
+	if (!isFn($match)) {
 		return
 	}
-	let result = $matcher(data)
+	let result = $match(data)
 	switch (true) {
 		case isObj(result):
 			let { name, callback } = result
@@ -41,61 +41,68 @@ export let onAction = data => {
 
 export let updater = {
 	DID_UPDATE: data => {
-		onAction(data)
+		handleAction(data)
 		return data
 	} 
 }
 
-export let bindReducer = reducer => {
-	return (state, actions) => {
-		let nextState = reducer(state, actions)
-		onAction({
-			state,
-			actions
-		})
-		return nextState
-	}
+export let bindReducer = reducer => (state, action) => {
+	let nextState = reducer(state, action)
+	let $$getState = $getState
+	$getState = () => nextState
+	handleAction({
+		state,
+		nextState,
+		action
+	})
+	$getState = $$getState
+	return nextState
 }
 
 // selector
-let addSelector = obj => {
+let addSelectors = obj => {
 	Object.keys(obj).forEach(key => {
 		let query = obj[key]
-		if (isFn(query)) {
-			$selectors[key] = (props, ...args) => query($getState(), $actions, props, ...args)
+		if (!isFn(query)) {
+			return
+		}
+		$selectors[key] = (props, ...args) => {
+			let state = $getState()
+			return query(state, $actions, props, ...args)
 		}
 	})
 }
 
 
 let addComponent = (name, component) => {
-	if (!isArr($component[name])) {
-		$component[name] = []
+	if (!isArr($components[name])) {
+		$components[name] = []
 	}
-	$component[name].push(component)
+	$components[name].push(component)
 }
 
 let removeComponent = (name, component) => {
-	if (!isArr($component[name])) {
+	if (!isArr($components[name])) {
 		return
 	}
-	let index = $component.indexOf(component)
+	let index = $components.indexOf(component)
 	if (index !== -1) {
-		$component.splice(i, 1)
+		$components.splice(i, 1)
 	}
 }
 
-let getComponent = name => {
-	let components = $component[name]
+let getComponents = name => {
+	let components = $components[name]
 	return isArr(components) ? components : []
 }
 
 let eachComponent = (name, fn) => {
-	getComponent(name).forEach(fn)
+	getComponents(name).forEach(fn)
 }
 
+let forceUpdate = component => component.forceUpdate()
 let renderCompoent = name => {
-	eachComponent(name, component => component.forceUpdate())
+	getComponents(name).forEach(forceUpdate)
 }
 
 export let injectProps = (name, ...args) => Component => {
