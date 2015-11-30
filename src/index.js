@@ -28,7 +28,11 @@ export let handleAction = data => {
 	switch (true) {
 		case isObj(result):
 			let { name, callback } = result
-			eachComponent(name, callback)
+			if (isArr(name)) {
+				name.forEach(item = eachComponent(item, callback))
+			} else {
+				eachComponent(name, callback)
+			}
 			break
 		case isStr(result):
 			renderCompoent(result)

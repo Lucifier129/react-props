@@ -1,6 +1,6 @@
 {
   "name": "react-props",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "inject props to react component for high performance rendering",
   "main": "lib/index.js",
   "jsnext:main": "src/index.js",
